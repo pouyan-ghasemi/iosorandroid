@@ -1,0 +1,131 @@
+<!-- iOS || Android -->
+
+<!-- loading Facebook SDK and JQuery -->
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<html lang="en-US">
+    <html>
+        <head>
+            <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+            <script src="http://underscorejs.org/underscore.js"></script>
+            <script src="js/flowtype.js"></script>
+            <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+           <link href='http://fonts.googleapis.com/css?family=Grand+Hotel|Quattrocento' rel='stylesheet' type='text/css'>
+            <link rel="stylesheet" href="css/style.css" />
+            <title>iOS || Android</title>
+            <script> 
+                var globalData;
+                $(document).ready(function() {
+                    $('#data').flowtype();
+                    $.ajaxSetup({ cache: true });
+                    $.getScript('//connect.facebook.net/en_UK/all.js', function(){
+                        FB.init({
+                            appId: 'Add your app id',
+                            channelUrl: '//localhost:8080/iosorandroid/iosorandroid.html',
+                            status     : true, // check login status
+                            cookie     : true, // enable cookies to allow the server to access the session
+                            xfbml      : true  // parse XFBML
+                        });     
+
+                        FB.getLoginStatus(function(response) {
+                            if (response.status === 'connected') {
+                                var uid = response.authResponse.userID;
+                                var accessToken = response.authResponse.accessToken;
+                                getDevices();
+                            } 
+                            else if (response.status === 'not_authorized') {
+                                authorizeApp();
+                            } 
+                            else {
+                                logintoFB();
+                            }
+                        });
+
+                    });
+                    // End of getScript
+                });
+                // End of Document Ready
+                function logintoFB(){
+                    $("#center").append(' <h2>Log in to Facebook to see if your friends use iOS or Android</h2><br>');
+                    $("#center").append('<button type="button" class="btn btn-primary btn-lg" '
+                        +' onclick="FB.login(function() {getDevices();});">Login to Facebook</button>');
+                }
+                function authorizeApp(){
+                    $("#center").append(' <h2>Use this app to see if your friends use iOS or Android</h2><br>');
+                    $("#center").append('<button type="button" class="btn btn-info btn-lg" '
+                        +' onclick="FB.login(function() {getDevices();});">Use this App</button>');
+                }
+
+                function getDevices(){
+                    // get all the devices your friends have
+                    FB.api('/me?fields=id,name,friends.fields(devices)' , 
+                    function(response) { 
+                        globalData = response.friends.data;
+                        var statisticalData = _.groupBy( response.friends.data, 
+                        function( friend ){ 
+                            if( friend.devices){
+                                return  _.pluck( friend.devices , 'os').sort();
+                            }
+                            // if the friend has no device 
+                            return 'None'; 
+                        }
+                        );
+
+                        var result = {};
+                        for( i in statisticalData) {
+                            result[i] = statisticalData[i].length;
+                        } 
+                        //globalData = result;
+                        displayData(result);
+                    } 
+                    );            
+                }
+
+                function displayData(data){
+
+                    var output = "<div><span class='green'>Android</span><span> || iOS </span></br>";
+                    if( _.has( data, "iOS")){
+                        output += "<span><span class='number' > "+ data["iOS"] + 
+                                "</span> of your friends use facebook with their iPhones, </span>";
+                    }
+                    if( _.has( data, "iOS,iOS")){
+                        output += "<span><span class='number'>"+ 
+                                    data["iOS,iOS"] + 
+                                    "</span> of your friends have both iPhone and iPad,</span>";
+                    }
+                    if( _.has( data, "Android")){
+                        output += "<span><span class ='number' >"+
+                                    data["Android"] + 
+                                    " </span>of your friends use facebook mostly with their Android devices,</span>";
+                    }
+
+                    if( _.has( data, "Android,iOS")){
+                        output += "<span><span class='number'>"+ 
+                                    data["Android,iOS"] + 
+                                    "</span> of your buddies have both Android and iOS,</span> ";
+                    }
+
+                    if( _.has( data, "Android,iOS,iOS")){
+                        output += "<span><span class='number'>"+ 
+                                    data["Android,iOS,iOS"] + 
+                                    "</span> of your rich friends do use Android, iPhone and iPad! </span>";
+                    }
+
+                    output += "</div>";
+                    $("#json").html(output);
+
+                }
+            </script>
+        </head>
+        <body class="page">
+            <div id="fb-root">
+
+                <div class="row">
+                    <div class="col-md-6 col-md-offset-3" id="center">
+                        <h1 id="json"></h1>
+                    </div>
+                </div>
+
+            </div>
+        </body>
+    </html>
